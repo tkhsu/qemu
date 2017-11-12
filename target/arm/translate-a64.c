@@ -363,12 +363,21 @@ static inline bool use_goto_tb(DisasContext *s, int n, uint64_t dest)
     return true;
 }
 
+static inline void generate_helper_print_pc(uint64_t pc)
+{
+    TCGv_i64 tcg_pc = tcg_temp_new_i64();
+    tcg_gen_movi_tl(tcg_pc, pc);
+    gen_helper_print_pc(tcg_pc);
+    tcg_temp_free_i64(tcg_pc);
+}
+
 static inline void gen_goto_tb(DisasContext *s, int n, uint64_t dest)
 {
     TranslationBlock *tb;
 
     tb = s->base.tb;
     if (use_goto_tb(s, n, dest)) {
+        generate_helper_print_pc(s->pc);
         tcg_gen_goto_tb(n);
         gen_a64_set_pc_im(dest);
         tcg_gen_exit_tb((intptr_t)tb + n);
@@ -11323,6 +11332,7 @@ static void aarch64_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
 {
     DisasContext *dc = container_of(dcbase, DisasContext, base);
     CPUARMState *env = cpu->env_ptr;
+    uint64_t old_pc = dc->pc;
 
     if (dc->ss_active && !dc->pstate_ss) {
         /* Singlestep state is Active-pending.
@@ -11341,6 +11351,10 @@ static void aarch64_tr_translate_insn(DisasContextBase *dcbase, CPUState *cpu)
         dc->base.is_jmp = DISAS_NORETURN;
     } else {
         disas_a64_insn(env, dc);
+    }
+
+    if (dc->base.is_jmp != DISAS_NORETURN) {
+        generate_helper_print_pc(old_pc);
     }
 
     dc->base.pc_next = dc->pc;

@@ -563,3 +563,8 @@ uint64_t HELPER(paired_cmpxchg64_be_parallel)(CPUARMState *env, uint64_t addr,
 {
     return do_paired_cmpxchg64_be(env, addr, new_lo, new_hi, true);
 }
+
+void HELPER(print_pc)(uint64_t pc)
+{
+    fprintf(stderr, "%" PRIx64 "\n", pc);
+}
